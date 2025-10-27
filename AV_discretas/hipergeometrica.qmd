@@ -1,0 +1,236 @@
+---
+title: "Distribución Hipergeométrica"
+lang: es
+---
+
+```{=html}
+<style>
+main.content {
+text-align: justify}
+</style>
+```
+
+```{r}
+#| label: setup
+#| echo: false
+#| message: false
+#| warning: false
+
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+library(RColorBrewer)
+library(plotly)
+library(scales)
+library(viridis)
+```
+
+#Distribución hipergeométrica
+
+La **distribución hipergeométrica** es una distribución de probabilidad discreta que surge en el contexto de la toma de una muestra de un conjunto de objetos de dos tipos.
+
+Modela el número de éxitos en una muestra cuando se conoce el número total de elementos y la cantidad de éxitos posibles dentro de la población.
+
+**Contexto e interpretación**
+
+Supongamos que tenemos una colección con $N$ objetos, de los cuales $K$ son de un tipo y los $N - K$ restantes son de otro tipo. Los objetos del primer tipo pueden corresponder a artículos en buen estado y los del segundo tipo a artículos en mal estado, o bien a personas con una cierta característica y aquellas que no poseen dicha característica.
+
+Si se toma una muestra de tamaño $n$ sin reemplazo y el orden de los objetos seleccionados no es relevante, el espacio muestral consiste de todos los posibles subconjuntos de tamaño $n$ de la colección de $N$ objetos, cuya cardinalidad es $\binom{N}{n}$. Sea $X$ el número de objetos del primer tipo en la muestra. Entonces $X$ puede tomar valores $0, 1, 2, \ldots, n$, donde:
+
+-   $X = 0$: todos los objetos seleccionados son del tipo 2
+-   $X = n$: todos los objetos seleccionados son del tipo 1
+
+Para que estos casos extremos sean posibles debe cumplirse $n \leq K$ y $n \leq N - K$, es decir
+
+$$n \leq \min\{K, N - K\}$$
+
+La probabilidad de que $X$ tome un valor $x$ está dada por la siguiente expresión:
+
+$$f(x) = P(X = x) = \begin{cases}
+\frac{\binom{K}{x}\binom{N-K}{n-x}}{\binom{N}{n}} & \text{si } x = 0, 1, \ldots, n. \\
+0 & \text{en otro caso.}
+\end{cases}$$ donde:
+
+$N$: tamaño total de la población
+
+$K$: número total de elementos tipo 1
+
+$n$: tamaño de la muestra
+
+$x$: número de elementos tipo 1 obtenidos en la muestra
+
+Decimos entonces que $X$ tiene una distribución hipergeométrica con parámetros $N$, $K$, $n$, y escribimos $X \sim \text{hipergeo}(N, K, n)$. Para entender la fórmulaobservemos lo siguiente:
+
+-   El término $\binom{K}{x}$ establece las diferentes formas en que $x$ objetos pueden escogerse de la colección de $K$ objetos del tipo 1.
+-   El término $\binom{N-K}{n-x}$ corresponde a las diferentes formas de escoger $n - x$ objetos de los $N - K$ objetos del tipo 2.
+
+Se usa entonces el principio multiplicativo para obtener el número total de formas de escoger una muestra de tamaño $n$ del contenido del tipo 1 y $n - x$ objetos del segundo tipo.
+
+**Parámetros y propiedades**
+
+1.  Esperanza:
+
+$E(X) = n \frac{K}{N}$
+
+2.  Varianza:
+
+$Var(X) = n \frac{K}{N} \frac{N-K}{N}\frac{N - n}{N - 1}$
+
+
+
+#Ejercicios:
+
+::: {#ejercicio 1}
+Demuestre que la función de probabilidad de la distribución hipergeométrica efectivamente es una función de probabilidad.
+
+Verifiquemos esta propiedad con un ejemplo concreto: $N = 20$, $K = 7$, $n = 5$.
+
+```{r}
+N <- 20
+K <- 7
+n <- 5
+
+# Calcular probabilidades para todos los valores posibles de x
+x_vals <- 0:n
+probs <- dhyper(x_vals, K, N-K, n)
+
+# Crear tabla de probabilidades
+df_prob <- data.frame(
+  x = x_vals,
+  `f(x)` = round(probs, 6)
+)
+
+kable(df_prob, 
+      caption = "Función de prob.hipergeo(20, 7, 5)",
+      align = 'c',
+      col.names = c("x", "f(x) = P(X = x)")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = FALSE)
+
+# Verificar que la suma es 1
+suma_prob <- sum(probs)
+cat("\n✓ Suma de probabilidades:", round(suma_prob, 10))
+cat("\n✓ Verificación: Σf(x) =", suma_prob, "= 1")
+```
+
+```{r}
+ggplot(df_prob, aes(x = factor(x), y = probs)) +
+  geom_col(fill = "#2E86AB", alpha = 0.8, width = 0.7) +
+  geom_text(aes(label = round(probs, 4)), 
+            vjust = -0.5, size = 3) +
+  labs(title = "Distribución Hipergeométrica (20, 7, 5)",
+       x = "Número de éxitos (x)",
+       y = "Probabilidad P(X = x)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+:::
+
+::: {#ejercicio 2}
+
+Se pone a la venta un lote de 100 artículos de los cuales 10 son defectuosos. Un comprador extrae una muestra al azar de 5 artículos y
+decide que si encuentra 2 o más defectuosos, entonces no compra el
+lote. Calcule la probabilidad de que la compra se efectúe.
+
+**Planteamiento**
+
+Identificamos los parámetros del problema:
+
+- $N = 100$ (tamaño total de la población de artículos)
+- $K = 10$ (número de artículos defectuosos)
+- $n = 5$ (tamaño de la muestra)
+- $X$ = número de artículos defectuosos en la muestra
+
+Por lo tanto, $X \sim \text{hipergeo}(100, 10, 5)$.
+La compra se efectúa si el comprador encuentra menos de 2 defectuosos, es decir, si $X < 2$. Esto ocurre cuando $X = 0$ o $X = 1$.
+
+$$P(\text{compra se efectúa}) = P(X < 2) = P(X = 0) + P(X = 1)$$
+
+```{r}
+N <- 100
+K <- 10
+n <- 5
+
+# Probabilidades individuales
+p_0 <- dhyper(0, K, N-K, n)
+p_1 <- dhyper(1, K, N-K, n)
+
+cat("P(X = 0) =", round(p_0, 6))
+cat("\nP(X = 1) =", round(p_1, 6))
+
+# Probabilidad de que se efectúe la compra
+p_compra <- p_0 + p_1
+cat("\n\nP(compra se efectúa) = P(X < 2) =", round(p_compra, 6))
+cat("\n                                   ≈", round(p_compra * 100, 2), "%")
+```
+```{r}
+x_vals <- 0:5
+probs_all <- dhyper(x_vals, K, N-K, n)
+probs_acum <- phyper(x_vals, K, N-K, n)
+
+df_completo <- data.frame(
+  x = x_vals,
+  `f(x)` = round(probs_all, 6),
+  `F(x)` = round(probs_acum, 6),
+  Decision = ifelse(x_vals < 2, "✓ Compra", "✗ No compra")
+)
+
+kable(df_completo, 
+      caption = "Distribución completa del número de defectuosos",
+      align = 'c',
+      col.names = c("x", "P(X = x)", "P(X ≤ x)", "Decisión")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover")) %>%
+  row_spec(which(df_completo$x < 2), background = "#D4EDDA", bold = TRUE) %>%
+  row_spec(which(df_completo$x >= 2), background = "#F8D7DA")
+```
+
+```{r}
+df_graficas <- data.frame(
+  x = x_vals,
+  Probabilidad = probs_all,
+  Categoria = factor(ifelse(x_vals < 2, "Compra se efectúa", "Compra NO se efectúa"),
+                     levels = c("Compra se efectúa", "Compra NO se efectúa"))
+)
+
+p1 <- ggplot(df_graficas, aes(x = factor(x), y = Probabilidad, fill = Categoria)) +
+  geom_col(alpha = 0.8, width = 0.7) +
+  geom_text(aes(label = round(Probabilidad, 4)), 
+            vjust = -0.5, size = 3.2) +
+  scale_fill_manual(values = c("Compra se efectúa" = "#06D6A0", 
+                                "Compra NO se efectúa" = "#EF476F")) +
+  labs(title = "Función de probabilidad",
+       subtitle = paste0("P(compra) = ", round(p_compra, 4)),
+       x = "Número de defectuosos (X)",
+       y = "P(X = x)",
+       fill = "") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5, color = "#06D6A0", face = "bold"),
+        legend.position = "top")
+
+grid.arrange(p1)
+```
+
+Desde la perspectiva del vendedor, existe una probabilidad relativamente alta de que el lote sea aceptado, a pesar de que el 10% de los artículos son defectuosos.
+
+Verificación de parámetros
+
+```{r}
+esperanza_teorica <- n * K / N
+cat("Esperanza teórica: E(X) = n·K/N =", esperanza_teorica)
+
+# Varianza teórica
+varianza_teorica <- n * (K/N) * ((N-K)/N) * ((N-n)/(N-1))
+cat("\nVarianza teórica: Var(X) =", round(varianza_teorica, 4))
+cat("\nDesviación estándar: σ =", round(sqrt(varianza_teorica), 4))
+
+# Simulación para verificar
+set.seed(123)
+simulacion <- rhyper(10000, K, N-K, n)
+cat("\n\nVerificación por simulación (10,000 muestras):")
+cat("\nEsperanza empírica:", round(mean(simulacion), 4))
+cat("\nVarianza empírica:", round(var(simulacion), 4))
+```
